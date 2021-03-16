@@ -1,0 +1,113 @@
+TASK: Get the Variable Name + Type + Index
+
+--> TO OUTPUT: NAME, TYPE, INDEX, SIZE
+
+
+CONTRACT CLASS:
+            self.name = node.name
+            self.dependencies = []
+            self.stateVars = {}
+            self.names = {}
+            self.enums = {}
+            self.structs = {}
+            self.mappings = {}
+            self.events = {}
+            self.modifiers = {}
+            self.functions = {}
+            self.constructor = None
+            self.inherited_names = {}
+
+
+bools:
+    bool = 1 byte or 8 bits
+    arrays declared using [] are always on hash and the size i.e. number of bools present in it are given on the index
+    all bools are packed at same index if there is enough space, since 1 bool take 1 byte so 32 bools can be packed into one index
+    Packing is done in little endian notation
+
+ints and uints:
+    All ints are present with the increment of a single byte, starting byte in packed variables show the byte count in little endian notation i.e. from right to left
+
+fixed and ufixed (floats):
+    code doesnt compiles
+
+bytes and strings:
+    have to check if size is less than 32 or 31 because of the terminating character. This is done using the value of variable given in the parsed tree.
+
+    in fixed arrays, each string occupies a index and it is stored at its original value if in size or else its transfered to its hash
+
+dynamic arrays (arrays without length specified):
+    Currently no known way of knowing the number of indices used by it (By Parsed Information).
+    The index always starts from hash of the index.
+    The index holds the no. of items in array.
+
+    ----> string[], bytes[] are left to be implemented
+
+structs:
+    Dont pack with others. Variables behave in similar way as normal variables will
+    Structs can have other structs in it as well.
+
+MultiDimensional Arrays:
+
+    -> Fixed Length Arrays:
+        T[X][Y] => Declared like this
+        Indexed like: T[Y][X]
+        for Y=0, all values of X span from index 0 to the index it can cover.
+        then for Y=1, we start with a new index, (not append the Y=0) and continue in this fashion
+
+
+    -> Go to array index, read value, then go to the hash of that index, read value (value is basically length),
+    hashes = dimensions of array, and at the last step, apply the normal fixed array code....
+    -> if next dimension is fixed, then elements are in that (i.e. each hash+k will represent an array)
+    -> from fixed to dynamic, if length is less than 32, put it in place, else move it to the hash and place it contiguously
+
+Dynamic arrays of Structs, simple Arrays of structs, mapping of structs:
+
+Enums:
+    Done
+
+Complex Types:
+~ not dealing these for now
+    T[1][5]
+    T[][][][][]
+    T[][3][2][][9][]
+    Total Dimensions allowed are 15
+
+    Fixed no. of columns, dynamic number of rows...
+    string[2][]
+    Fixed no. of rows allowed although column size is unlimited
+    string[][6]
+    ==> When we enter an element to an array, it absorbs a row i.e. array.push() will push a row.
+
+
+MAJOR NOTE: Dynamic Arrays and Strings and Bytes (meaning Dynamic Arrays) require running contract address in order to calculate their size hence dynamic arrays could not be calculated solely based on the parsed tree information.
+
+-> 1 hex = 4 bits
+integer could be of byte 1 to 32, uint=uint256, int=int256 [u=unsigned]
+
+-> Note: Zeros are tuncated when storing, so can't find the size of array if we look in storage and if variable is sored in place but since 1 index is assigned to an array so it is guaranteed that it will be in range of 32 i.e. the array size is less than 32 if it is greater than 32 then it will be saved at another location? i.e. next index is assigned to it.
+
+-> Array isnt packed with anything else. (another array or variable)
+
+-> If string is more than 31 bytes (31 characters then it is hashed to another location, else it is in the assigned index)
+So maximum size of a variable can be 31 bytes for it to be in the index assigned to it
+
+
+Mappings:
+    Read the parser to find statments where mapping is done and find the corresponding indices
+
+How Output Array Represents Data:
+    Type
+    Variable Name
+    Variable Type
+    Storage Index
+    Byte Index
+    Size
+
+
+Fixed to Dynamic: take fixed indices and each index represents the dynamic sub array i.e. each dynamic sub array is stored at hash of each index and size is stored at the index. Size of dynamic is written on fixed
+
+Dynamic to Fixed: size of sub array is stored at the index and arrays are stored at the hash index and hash index+1, +2 ... and so on. Size of fixed is written on dynamic.
+
+Fixed to fixed/dynamic works... dynamic to fixed and dynammic to dynamic left
+
+Fixed to Fixed: Place first element, place second then place all elements if T[m][n] then place m*n elements on original sequence of index s.t. only n elements can ever share an index.
